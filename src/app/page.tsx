@@ -3,10 +3,10 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, Code, Languages, RotateCcw } from 'lucide-react';
+import { Clock, Code, Languages, RotateCcw, ArrowRight } from 'lucide-react';
 import { snippets } from '@/lib/code';
 import { cn } from '@/lib/utils';
 
@@ -52,20 +52,22 @@ export default function CodeTypePage() {
   }, [time, getNewCode]);
   
   useEffect(() => {
-    if (status === 'running' && testType === 'time') {
+    if (status === 'running') {
       inputRef.current?.focus();
-      intervalRef.current = setInterval(() => {
-        setTimer(prev => {
-          if (prev <= 1) {
-            setStatus('finished');
-            if (intervalRef.current) clearInterval(intervalRef.current);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else if (status === 'running' && testType === 'full' && startTime === null) {
-      setStartTime(Date.now());
+      if (testType === 'time') {
+        intervalRef.current = setInterval(() => {
+          setTimer(prev => {
+            if (prev <= 1) {
+              setStatus('finished');
+              if (intervalRef.current) clearInterval(intervalRef.current);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      } else if (testType === 'full' && startTime === null) {
+        setStartTime(Date.now());
+      }
     }
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -86,18 +88,30 @@ export default function CodeTypePage() {
         durationInMinutes = (Date.now() - startTime) / (1000 * 60);
       }
 
-      const wordsTyped = typed.length / 5;
-      const wpm = durationInMinutes > 0 ? Math.round(wordsTyped / durationInMinutes) : 0;
-
-      const totalTyped = typed.length;
-      const accuracy = totalTyped > 0 ? Math.round(((totalTyped - errorCount) / totalTyped) * 100) : 100;
-
-      setStats({ wpm, accuracy: Math.max(0, accuracy) });
+      if (durationInMinutes > 0) {
+        const wordsTyped = typed.length / 5;
+        const wpm = Math.round(wordsTyped / durationInMinutes);
+  
+        const totalTyped = typed.length;
+        const accuracy = totalTyped > 0 ? Math.round(((totalTyped - errorCount) / totalTyped) * 100) : 100;
+  
+        setStats({ wpm, accuracy: Math.max(0, accuracy) });
+      } else {
+        setStats({ wpm: 0, accuracy: 100 });
+      }
     }
   }, [status, typed, time, testType, startTime, errorCount]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+
+    if (e.key === 'Tab') {
+      resetTest();
+      return;
+    }
+
     if (status === 'finished') return;
+    
     if (status === 'waiting') {
       setStatus('running');
     }
@@ -114,13 +128,8 @@ export default function CodeTypePage() {
       }
     }
     
-    if (typed.length + 1 === code.length && testType === 'full' && e.key.length === 1) {
+    if (typed.length + 1 === code.length && testType === 'full' && e.key.length === 1 && e.key !== 'Backspace') {
       setStatus('finished');
-    }
-    
-    // Allow meta keys for shortcuts, but prevent default for typing keys
-    if (!e.metaKey && !e.ctrlKey) {
-        e.preventDefault();
     }
   };
   
@@ -138,13 +147,13 @@ export default function CodeTypePage() {
             'text-muted-foreground': !isTyped,
             'text-foreground': isCorrect,
             'text-destructive bg-destructive/20 rounded-sm': isCorrect === false,
-            'cursor-blink relative': isCurrent,
-            'text-glow-primary': isCurrent,
+            'cursor-blink relative': isCurrent && status !== 'finished',
+            'text-glow-primary': isCurrent && status !== 'finished',
           }
         )
       };
     });
-  }, [code, typed]);
+  }, [code, typed, status]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-8 font-body">
@@ -199,7 +208,13 @@ export default function CodeTypePage() {
             onClick={() => inputRef.current?.focus()}
           >
             <CardContent className="p-6 md:p-8">
-              <div className="font-code text-lg md:text-xl tracking-wider leading-relaxed whitespace-pre-wrap break-words">
+              <div 
+                className={cn(
+                  "font-code text-lg md:text-xl tracking-wider leading-relaxed whitespace-pre-wrap break-words",
+                  status === 'waiting' && 'blur-sm'
+                )}
+                aria-hidden={status === 'waiting'}
+              >
                 {characters.map((item, index) => (
                   <span key={index} className={item.className}>
                     {item.char === '\n' ? '↵\n' : item.char}
@@ -213,22 +228,30 @@ export default function CodeTypePage() {
                 onKeyDown={handleKeyDown}
                 autoFocus
               />
+               {status === 'waiting' && (
+                <div 
+                  className="absolute inset-0 bg-transparent flex items-center justify-center rounded-lg"
+                  onClick={() => {
+                    inputRef.current?.focus();
+                    setStatus('running');
+                  }}
+                >
+                  <p className="text-2xl font-bold animate-pulse">Click here or start typing to begin</p>
+                </div>
+              )}
             </CardContent>
             <CardFooter className="flex justify-between items-center p-4 bg-card/50">
               <p className="text-3xl font-bold font-mono text-primary">{status === 'running' && testType === 'time' ? timer : ' '}</p>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="font-bold text-primary">Tab</span>
+                <ArrowRight size={16} />
+                <span>Next Test</span>
+              </div>
               <Button variant="ghost" size="icon" onClick={resetTest}>
                 <RotateCcw />
               </Button>
             </CardFooter>
           </Card>
-          {status !== 'running' && (
-            <div 
-              className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center rounded-lg"
-              onClick={() => status === 'waiting' && inputRef.current?.focus() && setStatus('running')}
-            >
-              {status === 'waiting' && <p className="text-2xl font-bold animate-pulse">Click here or start typing to begin</p>}
-            </div>
-          )}
         </div>
 
         {status === 'finished' && (
