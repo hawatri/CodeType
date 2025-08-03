@@ -212,6 +212,7 @@ export default function CodeTypePage() {
               <div 
                 className={cn(
                   "font-code text-lg md:text-xl tracking-wider leading-relaxed whitespace-pre-wrap break-words",
+                  { 'blur-sm': status === 'waiting' }
                 )}
               >
                 {characters.map((item, index) => (
@@ -285,4 +286,3 @@ export default function CodeTypePage() {
     </div>
   );
 }
-
