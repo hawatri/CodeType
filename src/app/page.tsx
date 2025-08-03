@@ -24,7 +24,8 @@ export default function CodeTypePage() {
   const [timer, setTimer] = useState(time);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [status, setStatus] = useState<'waiting' | 'running' | 'finished'>('waiting');
-  const [stats, setStats] = useState({ wpm: 0, accuracy: 0, errors: 0 });
+  const [errorCount, setErrorCount] = useState(0);
+  const [stats, setStats] = useState({ wpm: 0, accuracy: 0 });
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -44,6 +45,7 @@ export default function CodeTypePage() {
     setTimer(time);
     setTyped('');
     setStartTime(null);
+    setErrorCount(0);
     getNewCode();
     if (intervalRef.current) clearInterval(intervalRef.current);
     inputRef.current?.focus();
@@ -87,19 +89,12 @@ export default function CodeTypePage() {
       const wordsTyped = typed.length / 5;
       const wpm = durationInMinutes > 0 ? Math.round(wordsTyped / durationInMinutes) : 0;
 
-      let correctChars = 0;
-      let errorCount = 0;
-      for (let i = 0; i < typed.length; i++) {
-        if (typed[i] === code[i]) {
-          correctChars++;
-        } else {
-          errorCount++;
-        }
-      }
-      const accuracy = typed.length > 0 ? Math.round((correctChars / typed.length) * 100) : 0;
-      setStats({ wpm, accuracy, errors: errorCount });
+      const totalTyped = typed.length;
+      const accuracy = totalTyped > 0 ? Math.round(((totalTyped - errorCount) / totalTyped) * 100) : 100;
+
+      setStats({ wpm, accuracy: Math.max(0, accuracy) });
     }
-  }, [status, typed, code, time, testType, startTime]);
+  }, [status, typed, time, testType, startTime, errorCount]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (status === 'finished') return;
@@ -111,15 +106,22 @@ export default function CodeTypePage() {
       setTyped(prev => prev.slice(0, -1));
     } else if (e.key.length === 1) { // Regular character
       if (typed.length < code.length) {
+        const charToType = code[typed.length];
+        if (e.key !== charToType) {
+          setErrorCount(prev => prev + 1);
+        }
         setTyped(prev => prev + e.key);
       }
     }
     
-    if (typed.length + e.key.length === code.length && testType === 'full' && e.key.length === 1) {
+    if (typed.length + 1 === code.length && testType === 'full' && e.key.length === 1) {
       setStatus('finished');
     }
     
-    e.preventDefault();
+    // Allow meta keys for shortcuts, but prevent default for typing keys
+    if (!e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+    }
   };
   
   const characters = useMemo(() => {
@@ -222,7 +224,7 @@ export default function CodeTypePage() {
           {status !== 'running' && (
             <div 
               className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center rounded-lg"
-              onClick={() => status === 'waiting' && setStatus('running')}
+              onClick={() => status === 'waiting' && inputRef.current?.focus() && setStatus('running')}
             >
               {status === 'waiting' && <p className="text-2xl font-bold animate-pulse">Click here or start typing to begin</p>}
             </div>
@@ -245,7 +247,7 @@ export default function CodeTypePage() {
                 </div>
                 <div className="p-4 rounded-lg bg-card">
                   <p className="text-sm text-muted-foreground">Errors</p>
-                  <p className="text-4xl font-bold text-destructive">{stats.errors}</p>
+                  <p className="text-4xl font-bold text-destructive">{errorCount}</p>
                 </div>
             </CardContent>
             <CardFooter className="justify-center p-4">
@@ -260,5 +262,3 @@ export default function CodeTypePage() {
     </div>
   );
 }
-
-    
