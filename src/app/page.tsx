@@ -119,6 +119,14 @@ export default function CodeTypePage() {
 
     if (e.key === 'Backspace') {
       setTyped(prev => prev.slice(0, -1));
+    } else if (e.key === 'Enter') {
+        if (typed.length < code.length) {
+            const charToType = code[typed.length];
+            if ('\n' !== charToType) {
+                setErrorCount(prev => prev + 1);
+            }
+            setTyped(prev => prev + '\n');
+        }
     } else if (e.key.length === 1) { // Regular character
       if (typed.length < code.length) {
         const charToType = code[typed.length];
@@ -129,7 +137,7 @@ export default function CodeTypePage() {
       }
     }
     
-    if (typed.length + 1 === code.length && testType === 'full' && e.key.length === 1 && e.key !== 'Backspace') {
+    if (typed.length + 1 === code.length && testType === 'full' && (e.key === 'Enter' || (e.key.length === 1 && e.key !== 'Backspace'))) {
       setStatus('finished');
     }
   };
