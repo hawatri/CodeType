@@ -1,6 +1,9 @@
+
+const trim = (s: string) => s.replace(/^[^\S\r\n]+/gm, '');
+
 export const snippets = {
   javascript: [
-`function debounce(func, wait) {
+trim(`function debounce(func, wait) {
   let timeout;
   return function executedFunction(...args) {
     const later = () => {
@@ -10,8 +13,8 @@ export const snippets = {
     clearTimeout(timeout);
     timeout = setTimeout(later, wait);
   };
-}`,
-`const memoize = (fn) => {
+}`),
+trim(`const memoize = (fn) => {
   const cache = new Map();
   return (...args) => {
     const key = JSON.stringify(args);
@@ -22,8 +25,8 @@ export const snippets = {
     cache.set(key, result);
     return result;
   };
-};`,
-`async function fetchData(url) {
+};`),
+trim(`async function fetchData(url) {
   try {
     const response = await fetch(url);
     if (!response.ok) {
@@ -33,18 +36,18 @@ export const snippets = {
   } catch (error) {
     console.error('Fetch error:', error);
   }
-}`
+}`)
   ],
   python: [
-`def fibonacci(n):
+trim(`def fibonacci(n):
     a, b = 0, 1
     while a < n:
         yield a
         a, b = b, a + b
 
 for num in fibonacci(50):
-    print(num)`,
-`import os
+    print(num)`),
+trim(`import os
 
 def list_files(startpath):
     for root, dirs, files in os.walk(startpath):
@@ -53,13 +56,13 @@ def list_files(startpath):
         print(f'{indent}{os.path.basename(root)}/')
         subindent = ' ' * 4 * (level + 1)
         for f in files:
-            print(f'{subindent}{f}')`,
-`class Dog:
+            print(f'{subindent}{f}')`),
+trim(`class Dog:
     def __init__(self, name, age):
         self.name = name
         self.age = age
 
     def bark(self):
-        print("Woof!")`
+        print("Woof!")`)
   ]
 };
