@@ -124,8 +124,17 @@ export default function CodeTypePage() {
             const charToType = code[typed.length];
             if ('\n' !== charToType) {
                 setErrorCount(prev => prev + 1);
+                setTyped(prev => prev + '\n'); // Still add newline on error
+            } else {
+              // Correct newline, now skip indentation
+              let newTyped = typed + '\n';
+              let nextIndex = newTyped.length;
+              while (code[nextIndex] === ' ' || code[nextIndex] === '\t') {
+                newTyped += code[nextIndex];
+                nextIndex++;
+              }
+              setTyped(newTyped);
             }
-            setTyped(prev => prev + '\n');
         }
     } else if (e.key.length === 1) { // Regular character
       if (typed.length < code.length) {
@@ -137,8 +146,8 @@ export default function CodeTypePage() {
       }
     }
     
-    if (typed.length + 1 === code.length && testType === 'full' && (e.key === 'Enter' || (e.key.length === 1 && e.key !== 'Backspace'))) {
-      setStatus('finished');
+    if (typed.length >= code.length && testType === 'full') {
+        setStatus('finished');
     }
   };
   
@@ -294,3 +303,5 @@ export default function CodeTypePage() {
     </div>
   );
 }
+
+    
