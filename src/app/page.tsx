@@ -114,6 +114,7 @@ export default function CodeTypePage() {
     
     if (status === 'waiting') {
       setStatus('running');
+      return; // First keypress only starts the test
     }
 
     if (e.key === 'Backspace') {
@@ -211,9 +212,7 @@ export default function CodeTypePage() {
               <div 
                 className={cn(
                   "font-code text-lg md:text-xl tracking-wider leading-relaxed whitespace-pre-wrap break-words",
-                  status === 'waiting' && 'blur-sm'
                 )}
-                aria-hidden={status === 'waiting'}
               >
                 {characters.map((item, index) => (
                   <span key={index} className={item.className}>
@@ -231,7 +230,8 @@ export default function CodeTypePage() {
                {status === 'waiting' && (
                 <div 
                   className="absolute inset-0 bg-transparent flex items-center justify-center rounded-lg"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     inputRef.current?.focus();
                     setStatus('running');
                   }}
@@ -285,3 +285,4 @@ export default function CodeTypePage() {
     </div>
   );
 }
+
