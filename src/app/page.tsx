@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
@@ -12,13 +13,16 @@ import { cn } from '@/lib/utils';
 type Language = keyof typeof snippets;
 const languages = Object.keys(snippets) as Language[];
 const timeOptions = [15, 30, 60, 120, 180];
+type TestType = 'time' | 'full';
 
 export default function CodeTypePage() {
   const [language, setLanguage] = useState<Language>('javascript');
+  const [testType, setTestType] = useState<TestType>('time');
   const [time, setTime] = useState(30);
   const [code, setCode] = useState('');
   const [typed, setTyped] = useState('');
   const [timer, setTimer] = useState(time);
+  const [startTime, setStartTime] = useState<number | null>(null);
   const [status, setStatus] = useState<'waiting' | 'running' | 'finished'>('waiting');
   const [stats, setStats] = useState({ wpm: 0, accuracy: 0, errors: 0 });
 
@@ -39,13 +43,14 @@ export default function CodeTypePage() {
     setStatus('waiting');
     setTimer(time);
     setTyped('');
+    setStartTime(null);
     getNewCode();
     if (intervalRef.current) clearInterval(intervalRef.current);
     inputRef.current?.focus();
   }, [time, getNewCode]);
-
+  
   useEffect(() => {
-    if (status === 'running') {
+    if (status === 'running' && testType === 'time') {
       inputRef.current?.focus();
       intervalRef.current = setInterval(() => {
         setTimer(prev => {
@@ -57,20 +62,28 @@ export default function CodeTypePage() {
           return prev - 1;
         });
       }, 1000);
+    } else if (status === 'running' && testType === 'full' && startTime === null) {
+      setStartTime(Date.now());
     }
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [status]);
+  }, [status, testType, startTime]);
   
   useEffect(() => {
     setTimer(time);
     resetTest();
-  }, [time, language, resetTest]);
+  }, [time, language, resetTest, testType]);
 
   useEffect(() => {
     if (status === 'finished') {
-      const durationInMinutes = time / 60;
+      let durationInMinutes = 0;
+      if (testType === 'time') {
+        durationInMinutes = time / 60;
+      } else if (startTime) {
+        durationInMinutes = (Date.now() - startTime) / (1000 * 60);
+      }
+
       const wordsTyped = typed.length / 5;
       const wpm = durationInMinutes > 0 ? Math.round(wordsTyped / durationInMinutes) : 0;
 
@@ -83,14 +96,16 @@ export default function CodeTypePage() {
           errorCount++;
         }
       }
-      const accuracy = code.length > 0 ? Math.round((correctChars / typed.length) * 100) : 0;
+      const accuracy = typed.length > 0 ? Math.round((correctChars / typed.length) * 100) : 0;
       setStats({ wpm, accuracy, errors: errorCount });
     }
-  }, [status, typed, code, time]);
+  }, [status, typed, code, time, testType, startTime]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (status === 'finished') return;
-    if (status === 'waiting') setStatus('running');
+    if (status === 'waiting') {
+      setStatus('running');
+    }
 
     if (e.key === 'Backspace') {
       setTyped(prev => prev.slice(0, -1));
@@ -100,7 +115,7 @@ export default function CodeTypePage() {
       }
     }
     
-    if (typed.length + 1 === code.length && e.key.length === 1) {
+    if (typed.length + e.key.length === code.length && testType === 'full' && e.key.length === 1) {
       setStatus('finished');
     }
     
@@ -140,6 +155,15 @@ export default function CodeTypePage() {
         <Card className="bg-card/50 backdrop-blur-sm">
           <CardContent className="p-4 flex flex-col sm:flex-row gap-4 sm:gap-8 justify-center items-center">
             <div className="flex items-center gap-2">
+              <Code className="text-primary" />
+              <Tabs defaultValue={testType} onValueChange={(v) => setTestType(v as TestType)}>
+                <TabsList>
+                  <TabsTrigger value="time">Time</TabsTrigger>
+                  <TabsTrigger value="full">Full</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+            <div className="flex items-center gap-2">
               <Languages className="text-primary" />
               <Select onValueChange={(v) => setLanguage(v as Language)} defaultValue={language}>
                 <SelectTrigger className="w-[180px]">
@@ -152,16 +176,18 @@ export default function CodeTypePage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-2">
-              <Clock className="text-primary" />
-              <Tabs defaultValue={String(time)} onValueChange={(v) => setTime(Number(v))}>
-                <TabsList>
-                  {timeOptions.map(t => (
-                    <TabsTrigger key={t} value={String(t)}>{t}s</TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
-            </div>
+            {testType === 'time' && (
+              <div className="flex items-center gap-2">
+                <Clock className="text-primary" />
+                <Tabs defaultValue={String(time)} onValueChange={(v) => setTime(Number(v))}>
+                  <TabsList>
+                    {timeOptions.map(t => (
+                      <TabsTrigger key={t} value={String(t)}>{t}s</TabsTrigger>
+                    ))}
+                  </TabsList>
+                </Tabs>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -187,7 +213,7 @@ export default function CodeTypePage() {
               />
             </CardContent>
             <CardFooter className="flex justify-between items-center p-4 bg-card/50">
-              <p className="text-3xl font-bold font-mono text-primary">{status === 'running' ? timer : ' '}</p>
+              <p className="text-3xl font-bold font-mono text-primary">{status === 'running' && testType === 'time' ? timer : ' '}</p>
               <Button variant="ghost" size="icon" onClick={resetTest}>
                 <RotateCcw />
               </Button>
@@ -234,3 +260,5 @@ export default function CodeTypePage() {
     </div>
   );
 }
+
+    
