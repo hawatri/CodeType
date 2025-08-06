@@ -62,7 +62,61 @@ def list_files(startpath):
 
     def bark(self):
         print("Woof!")`
-  ]
+  ],
+  c: [
+`#include <stdio.h>
+
+int main() {
+    printf("Hello, World!\\n");
+    return 0;
+}`,
+`#include <stdio.h>
+
+void swap(int *a, int *b) {
+    int temp = *a;
+    *a = *b;
+    *b = temp;
+}`,
+`#include <stdio.h>
+
+long factorial(int n) {
+    if (n == 0)
+        return 1;
+    else
+        return n * factorial(n - 1);
+}`
+  ],
+  "c++": [
+`#include <iostream>
+
+int main() {
+    std::cout << "Hello, World!" << std::endl;
+    return 0;
+}`,
+`#include <iostream>
+#include <vector>
+#include <string>
+
+int main() {
+    std::vector<std::string> msg {"Hello", "C++", "World", "from", "VS Code!"};
+
+    for (const std::string& word : msg) {
+        std::cout << word << " ";
+    }
+    std::cout << std::endl;
+}`,
+`#include <iostream>
+
+class Rectangle {
+    int width, height;
+  public:
+    void set_values (int,int);
+    int area() {return width*height;}
 };
 
-    
+void Rectangle::set_values (int x, int y) {
+    width = x;
+    height = y;
+}`
+  ]
+};
